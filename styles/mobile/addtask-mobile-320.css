@@ -1,0 +1,26 @@
+/* ---- 320px Sub-Breakpoint ---- */
+@media (max-width: 360px) {
+  .add-task-section h1 {
+    font-size: 36px !important;
+  }
+
+  .form-label {
+    font-size: 14px !important;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 15px !important;
+  }
+
+  .btn-create-task,
+  .btn-cancel-task {
+    font-size: 16px !important;
+    padding: 12px 16px !important;
+  }
+
+  .subtask-input-wrapper input {
+    font-size: 14px !important;
+  }
+}

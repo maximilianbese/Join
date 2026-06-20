@@ -1,0 +1,83 @@
+{
+  "name": "Join - Status-Änderung Benachrichtigung",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-status-changed",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🔔 Webhook: Status geändert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ticket-status-changed"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.senderEmail }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "has-email-check",
+      "name": "Hat Absender-E-Mail?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $json.body.senderEmail }}",
+        "subject": "=📋 Dein Ticket wurde verschoben: {{ $json.body.title }}",
+        "emailType": "html",
+        "message": "=<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0; font-size: 24px;\">Join – Kanban Board</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #2A3647;\">Status-Update für dein Ticket</h2>\n  <p>Dein Ticket wurde in eine neue Spalte verschoben:</p>\n  <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 15px 0;\">\n    <p><strong>Ticket:</strong> {{ $json.body.title }}</p>\n    <p><strong>Alter Status:</strong> <span style=\"color: #666;\">{{ $json.body.oldStatus }}</span></p>\n    <p><strong>Neuer Status:</strong> <span style=\"color: #29ABE2; font-weight: bold;\">{{ $json.body.newStatus }}</span></p>\n  </div>\n  <p style=\"color: #666; font-size: 14px;\">Diese Nachricht wurde automatisch versendet via n8n.</p>\n</div>\n</body></html>"
+      },
+      "id": "send-notification",
+      "name": "📨 Status-E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Notification sent\" }"
+      },
+      "id": "respond-success",
+      "name": "✅ Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 200]
+    }
+  ],
+  "connections": {
+    "🔔 Webhook: Status geändert": {
+      "main": [[{ "node": "Hat Absender-E-Mail?", "type": "main", "index": 0 }]]
+    },
+    "Hat Absender-E-Mail?": {
+      "main": [
+        [{ "node": "📨 Status-E-Mail senden", "type": "main", "index": 0 }],
+        [{ "node": "✅ Webhook Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "📨 Status-E-Mail senden": {
+      "main": [[{ "node": "✅ Webhook Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

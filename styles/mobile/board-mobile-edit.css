@@ -1,0 +1,100 @@
+/* --- Disable landscape mode on mobile --- */
+.landscape-block {
+  display: none;
+}
+
+@media (max-width: 780px) and (orientation: landscape) {
+  .landscape-block {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: #f6f7f8;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+    font-size: 18px;
+    color: #2a3647;
+    font-weight: 700;
+  }
+}
+
+/* --- Mobile edit overlay --- */
+.mobile-edit-overlay {
+  display: none;
+}
+
+@media (min-width: 320px) and (max-width: 780px) {
+  .mobile-edit-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .mobile-edit-overlay.active {
+    display: flex;
+  }
+
+  .mobile-edit-card {
+    background: #fff;
+    border-radius: 30px;
+    width: 92vw;
+    max-width: 450px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-edit-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px 20px 8px 20px;
+    flex-shrink: 0;
+  }
+
+  .mobile-edit-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .mobile-edit-close:hover {
+    background-color: #eeeeee;
+  }
+
+  .mobile-edit-close img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-edit-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .mobile-edit-body .subtask-list {
+    max-height: none;
+  }
+
+  .mobile-edit-footer {
+    padding: 12px 20px 24px 20px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #d1d1d1;
+    flex-shrink: 0;
+  }
+}

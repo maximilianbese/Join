@@ -1,0 +1,441 @@
+{
+  "name": "Join - KI Issue Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "mailbox": "INBOX",
+        "action": "read",
+        "downloadAttachments": false,
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "email-trigger",
+      "name": "📧 E-Mail Empfang (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "imap": {
+          "id": "IMAP_CREDENTIAL_ID",
+          "name": "Issue Collector Mailbox"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.subject }}",
+              "operation": "notContains",
+              "value2": "Feature Request wurde erfasst"
+            },
+            {
+              "value1": "={{ $json.subject }}",
+              "operation": "notContains",
+              "value2": "Tageslimit erreicht"
+            },
+            {
+              "value1": "={{ $json.subject }}",
+              "operation": "notContains",
+              "value2": "Feature Request konnte nicht verarbeitet"
+            },
+            {
+              "value1": "={{ $json.from }}",
+              "operation": "notContains",
+              "value2": "join.issue.collector@gmail.com"
+            }
+          ],
+          "combineOperation": "all"
+        }
+      },
+      "id": "system-email-filter",
+      "name": "🔍 Systemmail-Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        350,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.dailyTicketCount }}",
+              "operation": "smallerEqual",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "throttle-check",
+      "name": "🛡️ Throttle Check (max 10/Tag)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        570,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Tageszähler aus Static Data lesen\nconst today = new Date().toISOString().split('T')[0];\nconst staticData = $getWorkflowStaticData('global');\n\nif (staticData.countDate !== today) {\n  staticData.countDate = today;\n  staticData.dailyCount = 0;\n}\n\nreturn [{\n  json: {\n    ...items[0].json,\n    dailyTicketCount: staticData.dailyCount,\n    todayDate: today\n  }\n}];"
+      },
+      "id": "count-checker",
+      "name": "📊 Tageszähler prüfen",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        350,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Du bist ein KI-Assistent der Feature Requests und Bug-Reports analysiert. Antworte NUR mit einem JSON-Objekt ohne Markdown-Blöcke.\n\nFormat:\n{\n  \"title\": \"Prägnanter Titel (max 60 Zeichen)\",\n  \"category\": \"technical\" | \"user-story\" | \"bug\",\n  \"priority\": \"urgent\" | \"medium\" | \"low\",\n  \"deadline\": \"YYYY-MM-DD oder null\",\n  \"description\": \"Aufbereitete Beschreibung mit allen relevanten Infos\"\n}\n\nPriorität-Regeln:\n- urgent: Wörter wie 'kritisch', 'dringend', 'blockiert', 'crash', 'sofort'\n- low: Wörter wie 'nice to have', 'irgendwann', 'Idee', 'optional'\n- medium: Standard"
+            },
+            {
+              "role": "user",
+              "content": "=Analysiere diese E-Mail:\n\nVon: {{ $json.from }}\nBetreff: {{ $json.subject }}\n\nInhalt:\n{{ $json.text }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "ai-parser",
+      "name": "🤖 KI-Analyse (OpenAI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [
+        790,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// KI-Antwort parsen\nconst aiResponse = items[0].json.choices[0].message.content;\nlet parsed;\n\ntry {\n  parsed = JSON.parse(aiResponse);\n} catch(e) {\n  // Fallback: Rohdaten aus E-Mail\n  parsed = {\n    title: items[0].json.subject || 'Neues Ticket',\n    category: 'technical',\n    priority: 'medium',\n    deadline: null,\n    description: items[0].json.text || ''\n  };\n}\n\n// KI-Hinweis hinzufügen\nconst senderForHint = items[0].json.replyTo || items[0].json.from;\nconst kiHinweis = '\\n\\n---\\n⚠️ Dieses Ticket wurde KI-generiert aus einer E-Mail von: ' + senderForHint;\n\nreturn [{\n  json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    senderEmail: items[0].json.replyTo || items[0].json.from,\n    originalSubject: items[0].json.subject\n  }\n}];"
+      },
+      "id": "parse-ai-response",
+      "name": "🔧 KI-Antwort aufbereiten",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1010,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://join-f047f-default-rtdb.europe-west1.firebasedatabase.app/tasks.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={\n  \"id\": {{ $now.toMillis() }},\n  \"title\": \"{{ $json.title }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"category\": \"{{ $json.category }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"dueDate\": \"{{ $json.deadline }}\",\n  \"status\": \"triage\",\n  \"position\": {{ $now.toMillis() }},\n  \"createdAt\": \"{{ $now.toISO() }}\",\n  \"createdBy\": \"email-collector\",\n  \"assignedTo\": [],\n  \"subtasks\": [],\n  \"senderEmail\": \"{{ $json.senderEmail }}\",\n  \"aiGenerated\": true\n}"
+      },
+      "id": "create-firebase-task",
+      "name": "🗃️ Ticket in Firebase anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Tageszähler erhöhen\nconst staticData = $getWorkflowStaticData('global');\nstaticData.dailyCount = (staticData.dailyCount || 0) + 1;\n\nreturn items;"
+      },
+      "id": "increment-counter",
+      "name": "➕ Zähler erhöhen",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "subject": "✅ Dein Feature Request wurde erfasst!",
+        "emailType": "html",
+        "message": "=<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0; font-size: 24px;\">Join – Kanban Board</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #2A3647;\">Dein Ticket wurde angelegt! 🎉</h2>\n  <p>Vielen Dank für deinen Feature Request. Wir haben folgendes Ticket erstellt:</p>\n  <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 15px 0;\">\n    <p><strong>Titel:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.title }}</p>\n    <p><strong>Kategorie:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.category }}</p>\n    <p><strong>Priorität:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.priority }}</p>\n  </div>\n  <p style=\"color: #666;\">Das Ticket wurde automatisch analysiert und in unserem Triage-Backlog platziert. Du wirst per E-Mail benachrichtigt, wenn sich der Status ändert.</p>\n</div>\n</body></html>"
+      },
+      "id": "confirm-email",
+      "name": "📨 Bestätigungs-E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        80
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.id }}",
+        "labelIds": [
+          "DEINE_LABEL_ID_ERLEDIGT"
+        ]
+      },
+      "id": "move-to-done",
+      "name": "📁 Mail → 'erledigt' verschieben",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "subject": "⚠️ Tageslimit erreicht – Feature Request nicht erfasst",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Tageslimit erreicht</h2>\n  <p>Leider wurde heute das maximale Limit von <strong>10 Feature Requests pro Tag</strong> erreicht.</p>\n  <p>Dein Anliegen wurde nicht verarbeitet. Bitte sende die Anfrage morgen erneut.</p>\n  <p style=\"color: #666; font-size: 14px;\">Dieses Limit dient der fairen Nutzung des Systems.</p>\n</div>\n</body></html>"
+      },
+      "id": "limit-email",
+      "name": "🚫 Limit-E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        680,
+        420
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.id }}",
+        "labelIds": [
+          "DEINE_LABEL_ID_ZU_BEARBEITEN"
+        ]
+      },
+      "id": "move-to-error",
+      "name": "📁 Mail → 'zu bearbeiten'",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        420
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "id": "error-email",
+      "name": "📨 Fehler-E-Mail an Absender",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        900,
+        420
+      ],
+      "parameters": {
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "subject": "⚠️ Dein Feature Request konnte nicht verarbeitet werden",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Verarbeitungsfehler</h2>\n  <p>Leider konnte dein Feature Request aufgrund eines technischen Fehlers nicht verarbeitet werden.</p>\n  <p>Unser Team hat deine E-Mail erhalten und wird sich zeitnah melden.</p>\n  <p style=\"color: #666; font-size: 14px;\">Bitte wende dich direkt an das Team, falls du innerhalb von 24 Stunden keine Rückmeldung erhältst.</p>\n</div>\n</body></html>"
+      },
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "📧 E-Mail Empfang (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Systemmail-Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Systemmail-Filter": {
+      "main": [
+        [
+          {
+            "node": "📊 Tageszähler prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Tageszähler prüfen": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Throttle Check (max 10/Tag)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🛡️ Throttle Check (max 10/Tag)": {
+      "main": [
+        [
+          {
+            "node": "🤖 KI-Analyse (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🚫 Limit-E-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 KI-Analyse (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "🔧 KI-Antwort aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 KI-Antwort aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "🗃️ Ticket in Firebase anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📨 Fehler-E-Mail an Absender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🗃️ Ticket in Firebase anlegen": {
+      "main": [
+        [
+          {
+            "node": "➕ Zähler erhöhen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📨 Bestätigungs-E-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📨 Fehler-E-Mail an Absender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "➕ Zähler erhöhen": {
+      "main": [
+        [
+          {
+            "node": "📁 Mail → 'erledigt' verschieben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Fehler-E-Mail an Absender": {
+      "main": [
+        [
+          {
+            "node": "📁 Mail → 'zu bearbeiten'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

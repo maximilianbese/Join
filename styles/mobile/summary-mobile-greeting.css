@@ -1,0 +1,42 @@
+@media (min-width: 320px) and (max-width: 780px) {
+  /* --- Greeting Overlay --- */
+  .greeting-container {
+    display: none;
+  }
+
+  .greeting-container.mobile-greeting-overlay,
+  .greeting-container.fade-out {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f6f7f8;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .greeting-container.fade-out {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease-out;
+  }
+
+  .greeting-container h2 {
+    font-size: 36px;
+    font-weight: 400;
+    color: #2a3647;
+    margin: 0;
+  }
+  .greeting-container h1 {
+    font-size: 47px;
+    font-weight: 700;
+    color: #29abe2;
+    margin: 0;
+  }
+}

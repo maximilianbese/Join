@@ -1,0 +1,137 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Inter", "Segoe UI", Arial, sans-serif; color: #2a3647; min-height: 100vh; }
+.screen        { display: none; min-height: 100vh; }
+.screen.active { display: flex; }
+
+/* ── Logo intro animation ── */
+.animation-container {
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: #f6f7f8;
+  z-index: 9999;
+  display: flex; justify-content: center; align-items: center;
+  pointer-events: none;
+  transition: opacity 0.4s ease-in-out;
+}
+#flying-logo {
+  position: absolute;
+  width: 274px; z-index: 10000;
+  transition: top 0.8s ease-in-out, left 0.8s ease-in-out,
+              width 0.8s ease-in-out, opacity 0.4s ease-in-out;
+}
+
+/* ── SCREEN 1 – Welcome ── */
+#screen-welcome { background: #2b3647; align-items: center; justify-content: center; flex-direction: column; }
+.welcome-card { background: #fff; border-radius: 20px; padding: 52px 68px 48px; width: 560px; max-width: 92vw; box-shadow: 0 10px 40px rgba(0,0,0,.30); text-align: center; }
+.welcome-card h1 { font-size: 38px; font-weight: 700; color: #2a3647; margin-bottom: 8px; }
+.w-underline { width: 56px; height: 3px; background: #29abe2; border-radius: 2px; margin: 0 auto 22px; }
+.welcome-card p { font-size: 16px; color: #666; line-height: 1.65; margin-bottom: 40px; }
+.option-row { display: flex; gap: 20px; }
+.option-col { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; }
+.option-label { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: #2a3647; }
+.btn-blue { display: block; width: 100%; padding: 13px 0; background: #29abe2; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .18s; text-align: center; text-decoration: none; }
+.btn-blue:hover { background: #1a96cc; }
+.btn-outline { display: block; width: 100%; padding: 12px 0; background: #fff; color: #2a3647; border: 1.5px solid #cdd1d9; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: border-color .18s; text-align: center; text-decoration: none; }
+.btn-outline:hover { border-color: #29abe2; }
+
+/* ── SCREENS 2 & 3 – Stakeholder ── */
+.sh-screen { background: #f6f7f8; flex-direction: column; }
+.top-bar-inner { max-width: 1440px; margin: 0 auto; padding: 16px 80px; display: flex; align-items: center; }
+.logo-img { height: 52px; width: auto; }
+.back-btn { background: none; border: none; cursor: pointer; color: #2a3647; padding: 7px 10px; border-radius: 8px; display: flex; align-items: center; transition: background .15s; margin-left: 10px; }
+.back-btn:hover { background: #e0e4ea; }
+.top-spacer { flex: 1; }
+.counter { font-size: 14px; color: #888; white-space: nowrap; }
+.counter .n { font-weight: 700; color: #2a3647; }
+.counter.ok   #count-used { color: #29abe2; }
+.counter.warn #count-used { color: #e07b00; }
+.counter.full .n           { color: #c0392b; }
+.sh-body { flex: 1; display: flex; align-items: center; justify-content: center; }
+.sh-body-inner { max-width: 1440px; width: 100%; margin: 0 auto; padding: 40px 80px 20px; display: flex; align-items: center; gap: 64px; }
+.sh-left { max-width: 480px; }
+.sh-left h1 { font-size: 56px; font-weight: 700; color: #2a3647; margin-bottom: 28px; line-height: 1.05; text-align: center; }
+.limit-alert { display: none; background: #fce8e8; border-radius: 8px; padding: 12px 18px; font-size: 14px; font-weight: 600; color: #b71c1c; margin-bottom: 20px; }
+.limit-alert.show { display: block; }
+.sh-intro { font-size: 17px; font-weight: 700; color: #2a3647; line-height: 1.4; margin-bottom: 18px; }
+.sh-text { font-size: 14px; color: #555; line-height: 1.75; margin-bottom: 12px; }
+.email-chip { display: inline-flex; align-items: center; gap: 7px; background: #eaf6fb; border: 1px solid #b3dff0; border-radius: 8px; padding: 8px 14px; font-size: 15px; font-weight: 600; color: #0b7ab5; margin: 10px 0 18px; word-break: break-all; }
+.email-chip svg { flex-shrink: 0; }
+.btn-create { display: inline-flex; align-items: center; gap: 8px; margin-top: 28px; padding: 14px 24px; background: #29abe2; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .18s; }
+.btn-create:hover { background: #1a96cc; }
+.sh-right { flex-shrink: 0; }
+.sh-right svg { width: 310px; max-width: 100%; }
+.sh-footer-inner { max-width: 1440px; margin: 0 auto; padding: 18px 80px; display: flex; justify-content: center; gap: 32px; font-size: 14px; }
+.sh-footer-inner a { color: #aaa; text-decoration: none; }
+.sh-footer-inner a:hover { color: #29abe2; }
+
+/* ── SCREEN 4 – Gmail compose popup ── */
+.compose-send-wrap.sending { opacity: .6; pointer-events: none; }
+.send-status { display: none; margin: 0 16px 10px; padding: 10px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; }
+.send-status.success { display: block; background: #d4f4e2; color: #1a7a45; }
+.send-status.error   { display: block; background: #fdecea; color: #c0392b; }
+#screen-email { align-items: center; justify-content: center; position: relative; padding: 0; overflow: hidden; }
+.compose-container { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: stretch; width: 560px; max-width: calc(100vw - 48px); }
+.compose-back-btn { align-self: flex-end; margin-top: 8px; background: #fff; color: #2a3647; border: 1px solid #d0d0d0; border-radius: 6px; padding: 8px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: "Google Sans", Roboto, Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.18); transition: background .12s; }
+.compose-back-btn:hover { background: #f1f3f4; }
+.gmail-bg { position: absolute; inset: 0; overflow: hidden; }
+.gmail-bg img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
+.email-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+.compose-wrap { position: relative; background: #fff; border-radius: 8px; box-shadow: 0 8px 48px rgba(0,0,0,.60); display: flex; flex-direction: column; font-family: "Google Sans", Roboto, Arial, sans-serif; }
+.compose-header { background: #404040; color: #fff; padding: 10px 16px; border-radius: 8px 8px 0 0; cursor: default; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 500; cursor: default; user-select: none; }
+.compose-header-icons { display: flex; gap: 2px; align-items: center; }
+.compose-icon-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; opacity: .8; padding: 4px 6px; border-radius: 50%; line-height: 1; transition: background .12s; }
+.compose-icon-btn:hover { background: rgba(255,255,255,.15); opacity: 1; }
+.compose-row { display: flex; align-items: center; padding: 6px 16px; border-bottom: 1px solid #e0e0e0; min-height: 40px; }
+.compose-input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; color: #202124; background: transparent; }
+.compose-input::placeholder { color: #80868b; }
+.compose-body-area { border: none; outline: none; resize: none; font-size: 14px; font-family: inherit; color: #202124; padding: 10px 16px; min-height: 180px; line-height: 1.6; width: 100%; }
+.compose-toolbar { border-top: 1px solid #e0e0e0; padding: 5px 10px; display: flex; gap: 1px; align-items: center; flex-wrap: wrap; }
+.toolbar-btn { background: none; border: none; cursor: pointer; padding: 5px 6px; border-radius: 4px; color: #444; font-size: 13px; line-height: 1; transition: background .12s; display: flex; align-items: center; justify-content: center; }
+.toolbar-btn:hover { background: #f1f3f4; }
+.toolbar-btn-bold { font-weight: 700; }
+.toolbar-btn-italic { font-style: italic; }
+.toolbar-btn-underline { text-decoration: underline; }
+.toolbar-font-select { border: none; outline: none; font-size: 13px; font-family: inherit; color: #444; background: transparent; cursor: pointer; padding: 4px 2px; border-radius: 4px; }
+.toolbar-font-select:hover { background: #f1f3f4; }
+.toolbar-sep { width: 1px; height: 18px; background: #e0e0e0; margin: 0 3px; flex-shrink: 0; }
+.compose-footer { padding: 8px 12px; display: flex; align-items: center; gap: 6px; border-top: 1px solid #e0e0e0; }
+.compose-send-wrap { display: flex; align-items: center; background: #0b57d0; border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+.compose-send { padding: 9px 20px; background: transparent; color: #fff; border: none; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.compose-send:hover { background: rgba(255,255,255,.1); }
+.compose-send-chevron { padding: 9px 10px; border: none; background: transparent; color: #fff; cursor: pointer; border-left: 1px solid rgba(255,255,255,.25); display: flex; align-items: center; }
+.compose-send-chevron:hover { background: rgba(255,255,255,.1); }
+.compose-footer-icons { display: flex; gap: 2px; color: #444; flex: 1; }
+.compose-footer-trash { margin-left: auto; flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .sh-right { display: none; }
+  .top-bar-inner, .sh-body-inner, .sh-footer-inner { padding-left: 24px; padding-right: 24px; }
+  .sh-left h1 { font-size: 42px; }
+  .welcome-card { padding: 40px 24px 36px; }
+  .option-row { flex-direction: column; }
+  .compose-container { width: calc(100vw - 32px); }
+}
+
+/* ---- 320px Sub-Breakpoint ---- */
+@media (max-width: 360px) {
+  .welcome-card { padding: 28px 16px 24px; }
+  .welcome-card h1 { font-size: 30px; }
+  .welcome-card p { font-size: 14px; margin-bottom: 28px; }
+  .btn-blue, .btn-outline { font-size: 14px; padding: 11px 0; }
+
+  .top-bar-inner, .sh-body-inner, .sh-footer-inner { padding-left: 16px; padding-right: 16px; }
+  .sh-left h1 { font-size: 32px; }
+  .sh-intro { font-size: 15px; }
+  .sh-text { font-size: 13px; }
+  .btn-create { font-size: 14px; padding: 12px 16px; margin-top: 20px; }
+  .email-chip { font-size: 13px; padding: 6px 10px; }
+  .counter { font-size: 12px; }
+
+  .compose-container { width: calc(100vw - 16px); }
+  .compose-body-area { min-height: 140px; font-size: 13px; }
+  .compose-input { font-size: 13px; }
+  .compose-send { font-size: 13px; padding: 8px 14px; }
+  .toolbar-btn { padding: 4px 3px; }
+
+  .sh-footer-inner { gap: 16px; font-size: 12px; }
+}

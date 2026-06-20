@@ -1,0 +1,12 @@
+.vscode/*
+scripts/firebase-config.js
+
+# Issue Collector - Sensible Konfiguration (NIEMALS ins Repo!)
+scripts/issue-collector/config.js
+.env
+.env.local
+n8n-workflows/.env
+
+# n8n Encryption Key und Credentials (falls lokal gespeichert)
+n8n-workflows/credentials/
+*.n8n.env
