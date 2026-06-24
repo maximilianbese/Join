@@ -141,7 +141,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// KI-Antwort parsen\nconst aiResponse = items[0].json.choices[0].message.content;\nlet parsed;\n\ntry {\n  parsed = JSON.parse(aiResponse);\n} catch(e) {\n  // Fallback: Rohdaten aus E-Mail\n  parsed = {\n    title: items[0].json.subject || 'Neues Ticket',\n    category: 'technical',\n    priority: 'medium',\n    deadline: null,\n    description: items[0].json.text || ''\n  };\n}\n\n// KI-Hinweis hinzufügen\nconst senderForHint = items[0].json.replyTo || items[0].json.from;\nconst kiHinweis = '\\n\\n---\\n⚠️ Dieses Ticket wurde KI-generiert aus einer E-Mail von: ' + senderForHint;\n\nreturn [{\n  json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    senderEmail: items[0].json.replyTo || items[0].json.from,\n    originalSubject: items[0].json.subject\n  }\n}];"
+        "functionCode": "// KI-Antwort parsen\nconst aiResponse = items[0].json.choices[0].message.content;\nlet parsed;\n\ntry {\n  parsed = JSON.parse(aiResponse);\n} catch(e) {\n  parsed = {\n    title: 'Neues Ticket',\n    category: 'technical',\n    priority: 'medium',\n    deadline: null,\n    description: ''\n  };\n}\n\n// Original E-Mail-Daten aus dem IMAP-Node holen (items[0] = OpenAI-Response, nicht die E-Mail)\nconst emailData = $items('📧 E-Mail Empfang (IMAP)')[0].json;\nconst bodyText = emailData.text || emailData.html || '';\nconst senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\nconst senderEmail = (senderMatch && senderMatch[1].trim())\n  || emailData.replyTo\n  || emailData.from;\n\nconst kiHinweis = '\\n\\n---\\n⚠️ Dieses Ticket wurde KI-generiert aus einer E-Mail von: ' + senderEmail;\n\nreturn [{\n  json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }\n}];"
       },
       "id": "parse-ai-response",
       "name": "🔧 KI-Antwort aufbereiten",
@@ -196,10 +196,10 @@
     {
       "parameters": {
         "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
-        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "toEmail": "={{ $('🔧 KI-Antwort aufbereiten').item.json.senderEmail }}",
         "subject": "✅ Dein Feature Request wurde erfasst!",
         "emailType": "html",
-        "message": "=<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0; font-size: 24px;\">Join – Kanban Board</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #2A3647;\">Dein Ticket wurde angelegt! 🎉</h2>\n  <p>Vielen Dank für deinen Feature Request. Wir haben folgendes Ticket erstellt:</p>\n  <div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 15px 0;\">\n    <p><strong>Titel:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.title }}</p>\n    <p><strong>Kategorie:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.category }}</p>\n    <p><strong>Priorität:</strong> {{ $('🔧 KI-Antwort aufbereiten').item.json.priority }}</p>\n  </div>\n  <p style=\"color: #666;\">Das Ticket wurde automatisch analysiert und in unserem Triage-Backlog platziert. Du wirst per E-Mail benachrichtigt, wenn sich der Status ändert.</p>\n</div>\n</body></html>"
+        "message": "={{ '<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\"><div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\"><h1 style=\"color: white; margin: 0; font-size: 24px;\">Join – Kanban Board</h1></div><div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\"><h2 style=\"color: #2A3647;\">Dein Ticket wurde angelegt! 🎉</h2><p>Vielen Dank für deinen Feature Request. Wir haben folgendes Ticket erstellt:</p><div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 15px 0;\"><p><strong>Titel:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.title + '</p><p><strong>Kategorie:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.category + '</p><p><strong>Priorität:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.priority + '</p></div><p style=\"color: #666;\">Das Ticket wurde automatisch analysiert und in unserem Triage-Backlog platziert. Du wirst per E-Mail benachrichtigt, wenn sich der Status ändert.</p></div></body></html>' }}"
       },
       "id": "confirm-email",
       "name": "📨 Bestätigungs-E-Mail senden",
@@ -243,7 +243,7 @@
     {
       "parameters": {
         "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
-        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
         "subject": "⚠️ Tageslimit erreicht – Feature Request nicht erfasst",
         "emailType": "html",
         "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Tageslimit erreicht</h2>\n  <p>Leider wurde heute das maximale Limit von <strong>10 Feature Requests pro Tag</strong> erreicht.</p>\n  <p>Dein Anliegen wurde nicht verarbeitet. Bitte sende die Anfrage morgen erneut.</p>\n  <p style=\"color: #666; font-size: 14px;\">Dieses Limit dient der fairen Nutzung des Systems.</p>\n</div>\n</body></html>"
@@ -298,7 +298,7 @@
       ],
       "parameters": {
         "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
-        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
         "subject": "⚠️ Dein Feature Request konnte nicht verarbeitet werden",
         "emailType": "html",
         "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Verarbeitungsfehler</h2>\n  <p>Leider konnte dein Feature Request aufgrund eines technischen Fehlers nicht verarbeitet werden.</p>\n  <p>Unser Team hat deine E-Mail erhalten und wird sich zeitnah melden.</p>\n  <p style=\"color: #666; font-size: 14px;\">Bitte wende dich direkt an das Team, falls du innerhalb von 24 Stunden keine Rückmeldung erhältst.</p>\n</div>\n</body></html>"

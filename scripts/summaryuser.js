@@ -117,10 +117,26 @@ function updateEmailRequestsCount() {
     const ticketsRef = window.fbRtdbRef(window.firebaseRtdb, "tasks");
     window.fbRtdbOnValue(ticketsRef, function (snapshot) {
       let count = 0;
+      const SYSTEM_PHRASES = [
+        "wurde erfolgreich erfasst und wird bearbeitet",
+        "feature request bearbeitet",
+        "ticket wurde erstellt",
+        "ticket wurde angelegt",
+        "automatisch analysiert und in unserem triage-backlog",
+        "tageslimit erreicht",
+        "feature request konnte nicht verarbeitet werden",
+      ];
+      const collectorEmail = typeof ISSUE_COLLECTOR_EMAIL !== "undefined"
+        ? ISSUE_COLLECTOR_EMAIL.toLowerCase() : "join.issue.collector@gmail.com";
       if (snapshot.exists()) {
         snapshot.forEach(function (child) {
           const t = child.val();
-          if (t && t.status === "triage") count++;
+          if (!t || t.status !== "triage") return;
+          const sender = (t.senderEmail || "").replace(/^["'\s]+|["'\s]+$/g, "").toLowerCase();
+          if (sender === collectorEmail) return;
+          const text = ((t.title || "") + " " + (t.description || "")).toLowerCase();
+          if (SYSTEM_PHRASES.some(function (p) { return text.includes(p); })) return;
+          count++;
         });
       }
       const el = document.getElementById("count-email-requests");

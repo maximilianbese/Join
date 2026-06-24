@@ -351,7 +351,8 @@
 
         try {
           emailjs.init(publicKey);
-          await emailjs.send(serviceId, templateId, { to_email: to, subject: subject, message: body, email: replyTo, name: replyTo });
+          const messageWithSender = `REPLY_TO_EMAIL: ${replyTo}\n\n${body}`;
+          await emailjs.send(serviceId, templateId, { to_email: to, subject: subject, message: messageWithSender, email: replyTo, name: replyTo, reply_to: replyTo });
           showSendStatus("success", "✓ Anfrage erfolgreich gesendet! Du wirst weitergeleitet…");
           document.getElementById("compose-from").value    = "";
           document.getElementById("compose-subject").value = "";
