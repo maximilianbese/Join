@@ -10,7 +10,7 @@
  */
 function getWebhookUrl() {
   const url = typeof N8N_STATUS_WEBHOOK_URL !== "undefined" ? N8N_STATUS_WEBHOOK_URL : null;
-  if (!url || url.includes("DEIN-SUBDOMAIN")) {
+  if (!url || url.includes("DEIN-SUBDOMAIN") || url.includes("YOUR-SUBDOMAIN") || url.includes("your-n8n")) {
     console.warn("n8n webhook URL not configured — update config.js");
     return null;
   }

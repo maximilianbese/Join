@@ -101,7 +101,9 @@ function getTaskDetailsHeaderHtml(task, categoryClass, categoryLabel) {
  * @returns {string} The HTML string for date and priority rows.
  */
 function getTaskDetailsPriorityHtml(task, priorityIcon) {
-  const label = task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : '–';
+  const raw = (task.priority || '').toLowerCase();
+  const normalized = (raw === 'high') ? 'urgent' : raw;
+  const label = normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : '–';
   const dueDate = `<div class="task-details-info"><span class="task-details-label">Due date:</span><span>${task.dueDate || '–'}</span></div>`;
   const priority = `<div class="task-details-info"><span class="task-details-label">Priority:</span><div class="task-details-priority"><span>${label}</span>${priorityIcon}</div></div>`;
   return dueDate + priority;

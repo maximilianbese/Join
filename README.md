@@ -49,9 +49,9 @@ Gehe in n8n zu **Settings → Credentials** und lege folgende Zugangsdaten an:
 ### Schritt 2: Workflows importieren
 
 1. In n8n: **Workflows → Import from File**
-2. Importiere beide Dateien aus dem **Root-Verzeichnis** des Repos:
-   - `issue-collector-workflow.json` – Haupt-Workflow (E-Mail → Ticket)
-   - `status-notification-workflow.json` – Benachrichtigung bei Statusänderung
+2. Importiere beide Dateien aus dem **`n8n/`-Ordner** des Repos:
+   - `n8n/issue-collector-workflow.json` – Haupt-Workflow (E-Mail → Ticket)
+   - `n8n/status-notification-workflow.json` – Benachrichtigung bei Statusänderung
 3. In jedem Node die Credential-IDs durch deine echten Credentials ersetzen.
 
 ### Schritt 3: Firebase URL konfigurieren

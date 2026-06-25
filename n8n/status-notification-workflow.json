@@ -8,7 +8,7 @@
         "options": {}
       },
       "id": "webhook-trigger",
-      "name": "🔔 Webhook: Status geändert",
+      "name": "🔔 Webhook: Ticket-Statuswechsel empfangen",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [240, 300],
@@ -17,18 +17,30 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.body.senderEmail }}",
-              "operation": "isNotEmpty"
+              "id": "check-sender-email",
+              "leftValue": "={{ $json.body.senderEmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "has-email-check",
       "name": "Hat Absender-E-Mail?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "typeVersion": 2,
       "position": [460, 300]
     },
     {
@@ -64,7 +76,7 @@
     }
   ],
   "connections": {
-    "🔔 Webhook: Status geändert": {
+    "🔔 Webhook: Ticket-Statuswechsel empfangen": {
       "main": [[{ "node": "Hat Absender-E-Mail?", "type": "main", "index": 0 }]]
     },
     "Hat Absender-E-Mail?": {

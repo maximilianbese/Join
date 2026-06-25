@@ -163,9 +163,10 @@ function processAssigneeItem(contactId) {
  * @returns {string} The priority icon HTML string.
  */
 function getPriorityIcon(priority) {
-  if (priority === "urgent") {
+  const p = (priority || "").toLowerCase();
+  if (p === "urgent" || p === "high") {
     return getUrgentPriorityIcon();
-  } else if (priority === "medium") {
+  } else if (p === "medium") {
     return getMediumPriorityIcon();
   } else {
     return getLowPriorityIcon();

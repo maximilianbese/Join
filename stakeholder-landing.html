@@ -291,9 +291,26 @@
         }, 500);
       })();
 
+      let counterPollInterval = null;
+
+      async function refreshCounter() {
+        try {
+          const res = await fetch(RTDB_URL + "/tasks.json");
+          if (res.ok) {
+            const used = countTodayTickets(await res.json());
+            updateCounter(used);
+          }
+        } catch (_) {}
+      }
+
       function showScreen(id) {
         document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
         document.getElementById("screen-" + id).classList.add("active");
+        // Counter-Polling nur auf dem Stakeholder-Screen
+        clearInterval(counterPollInterval);
+        if (id === "stakeholder" || id === "limit") {
+          counterPollInterval = setInterval(refreshCounter, 30000);
+        }
       }
 
       async function goToStakeholder() {
@@ -316,7 +333,9 @@
         if (!tasks) return 0;
         const today = new Date().toISOString().slice(0, 10);
         return Object.values(tasks).filter(function(t) {
-          return t.timestamp && t.timestamp.startsWith(today);
+          // n8n speichert als "createdAt", Fallback auf "timestamp"
+          const dateField = t.createdAt || t.timestamp || "";
+          return dateField.startsWith(today);
         }).length;
       }
 
@@ -342,7 +361,7 @@
         if (!publicKey || publicKey.startsWith("YOUR_")) {
           const su = encodeURIComponent(subject);
           const b  = encodeURIComponent(body);
-          window.open("https://mail.google.com/mail/?view=cm&to=" + encodeURIComponent(to) + "&su=" + su + "&body=" + b, "_blank");
+          window.location.href = "mailto:" + encodeURIComponent(to) + "?subject=" + su + "&body=" + b;
           return;
         }
 
@@ -357,6 +376,11 @@
           document.getElementById("compose-from").value    = "";
           document.getElementById("compose-subject").value = "";
           document.getElementById("compose-body").value    = "";
+          // Counter nach Versand aktualisieren
+          try {
+            const res2 = await fetch(RTDB_URL + "/tasks.json");
+            if (res2.ok) updateCounter(countTodayTickets(await res2.json()));
+          } catch (_) {}
           setTimeout(function() { window.location.href = "./index.html"; }, 2000);
         } catch (err) {
           console.error("EmailJS error:", err);
