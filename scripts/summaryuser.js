@@ -132,7 +132,9 @@ function updateEmailRequestsCount() {
         snapshot.forEach(function (child) {
           const t = child.val();
           if (!t || t.status !== "triage") return;
-          const sender = (t.senderEmail || "").replace(/^["'\s]+|["'\s]+$/g, "").toLowerCase();
+          const rawSender = t.senderEmail || "";
+          const senderMatch = rawSender.match(/[\w.+\-]+@[\w\-]+\.[\w.]+/);
+          const sender = (senderMatch ? senderMatch[0] : rawSender.replace(/^["'\s<>]+|["'\s<>]+$/g, "")).toLowerCase();
           if (sender === collectorEmail) return;
           const text = ((t.title || "") + " " + (t.description || "")).toLowerCase();
           if (SYSTEM_PHRASES.some(function (p) { return text.includes(p); })) return;

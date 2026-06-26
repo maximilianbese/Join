@@ -3,6 +3,70 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## 📥 Eingang & Filterung\nEmpfängt E-Mails per IMAP, filtert Systemmails heraus\nund prüft das Tageslimit (max. 10 Tickets/Tag).",
+        "height": 420,
+        "width": 760,
+        "color": 5
+      },
+      "id": "sticky-intake",
+      "name": "Sticky Note - Eingang",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 KI-Verarbeitung\nGroq analysiert den Inhalt und extrahiert\nTitel, Kategorie, Priorität und Beschreibung.",
+        "height": 340,
+        "width": 480,
+        "color": 6
+      },
+      "id": "sticky-ai",
+      "name": "Sticky Note - KI",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Erfolgspfad\nTicket in Firebase speichern, Zähler erhöhen,\nBestätigungs-E-Mail senden & Mail archivieren.",
+        "height": 340,
+        "width": 820,
+        "color": 2
+      },
+      "id": "sticky-success",
+      "name": "Sticky Note - Erfolg",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Fehlerpfade\n**Limit erreicht:** Absender wird informiert.\n**KI-/Firebase-Fehler:** Fehler-Mail senden\n& Mail zur manuellen Bearbeitung markieren.",
+        "height": 240,
+        "width": 820,
+        "color": 4
+      },
+      "id": "sticky-errors",
+      "name": "Sticky Note - Fehler",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        480
+      ]
+    },
+    {
+      "parameters": {
         "pollTimes": {
           "item": [
             {
@@ -22,8 +86,8 @@
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2,
       "position": [
-        240,
-        300
+        200,
+        320
       ],
       "credentials": {
         "imap": {
@@ -65,8 +129,21 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        350,
-        200
+        420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const today = new Date().toISOString().split('T')[0];\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.countDate !== today) {\n  staticData.countDate = today;\n  staticData.dailyCount = 0;\n}\nreturn [{ json: { ...items[0].json, dailyTicketCount: staticData.dailyCount, todayDate: today } }];"
+      },
+      "id": "count-checker",
+      "name": "📊 Tageszähler prüfen",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        640,
+        320
       ]
     },
     {
@@ -86,69 +163,56 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        570,
-        200
+        860,
+        320
       ]
     },
     {
       "parameters": {
-        "functionCode": "// Tageszähler aus Static Data lesen\nconst today = new Date().toISOString().split('T')[0];\nconst staticData = $getWorkflowStaticData('global');\n\nif (staticData.countDate !== today) {\n  staticData.countDate = today;\n  staticData.dailyCount = 0;\n}\n\nreturn [{\n  json: {\n    ...items[0].json,\n    dailyTicketCount: staticData.dailyCount,\n    todayDate: today\n  }\n}];"
-      },
-      "id": "count-checker",
-      "name": "📊 Tageszähler prüfen",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        350,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "chat",
-        "operation": "create",
-        "model": "gpt-4o-mini",
-        "messages": {
-          "values": [
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "role": "system",
-              "content": "Du bist ein KI-Assistent der Feature Requests und Bug-Reports analysiert. Antworte NUR mit einem JSON-Objekt ohne Markdown-Blöcke.\n\nFormat:\n{\n  \"title\": \"Prägnanter Titel (max 60 Zeichen)\",\n  \"category\": \"technical\" | \"user-story\" | \"bug\",\n  \"priority\": \"urgent\" | \"medium\" | \"low\",\n  \"deadline\": \"YYYY-MM-DD oder null\",\n  \"description\": \"Aufbereitete Beschreibung mit allen relevanten Infos\"\n}\n\nPriorität-Regeln:\n- urgent: Wörter wie 'kritisch', 'dringend', 'blockiert', 'crash', 'sofort'\n- low: Wörter wie 'nice to have', 'irgendwann', 'Idee', 'optional'\n- medium: Standard"
+              "name": "Authorization",
+              "value": "Bearer {{ $credentials.groqApi.apiKey }}"
             },
             {
-              "role": "user",
-              "content": "=Analysiere diese E-Mail:\n\nVon: {{ $json.from }}\nBetreff: {{ $json.subject }}\n\nInhalt:\n{{ $json.text }}"
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
-        "options": {
-          "temperature": 0.3
-        }
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "{\"model\": \"llama-3.3-70b-versatile\", \"temperature\": 0.3, \"messages\": [{\"role\": \"system\", \"content\": \"Du bist ein KI-Assistent der Feature Requests und Bug-Reports analysiert. Antworte NUR mit einem JSON-Objekt ohne Markdown-Blocke.\\n\\nFormat:\\n{\\n  \\\"title\\\": \\\"Praegnanter Titel (max 60 Zeichen)\\\",\\n  \\\"category\\\": \\\"technical | user-story | bug\\\",\\n  \\\"priority\\\": \\\"urgent | medium | low\\\",\\n  \\\"deadline\\\": \\\"YYYY-MM-DD oder null\\\",\\n  \\\"description\\\": \\\"Aufbereitete Beschreibung\\\"\\n}\\n\\nPrioritaet-Regeln:\\n- urgent: kritisch, dringend, blockiert, crash\\n- low: nice to have, irgendwann, optional\\n- medium: Standard\"}, {\"role\": \"user\", \"content\": \"=Analysiere diese E-Mail:\\n\\nVon: {{ $json.from }}\\nBetreff: {{ $json.subject }}\\n\\nInhalt:\\n{{ $json.text }}\"}]}"
       },
-      "id": "ai-parser",
-      "name": "🤖 KI-Analyse (OpenAI)",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1,
+      "id": "groq-ai",
+      "name": "🤖 KI-Analyse (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
       "position": [
-        790,
+        1100,
         200
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "OPENAI_CREDENTIAL_ID",
-          "name": "OpenAI API"
+        "httpHeaderAuth": {
+          "id": "GROQ_CREDENTIAL_ID",
+          "name": "Groq API"
         }
       }
     },
     {
       "parameters": {
-        "functionCode": "// KI-Antwort parsen\nconst aiResponse = items[0].json.choices[0].message.content;\nlet parsed;\n\ntry {\n  parsed = JSON.parse(aiResponse);\n} catch(e) {\n  parsed = {\n    title: 'Neues Ticket',\n    category: 'technical',\n    priority: 'medium',\n    deadline: null,\n    description: ''\n  };\n}\n\n// Original E-Mail-Daten aus dem IMAP-Node holen (items[0] = OpenAI-Response, nicht die E-Mail)\nconst emailData = $items('📧 E-Mail Empfang (IMAP)')[0].json;\nconst bodyText = emailData.text || emailData.html || '';\nconst senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\nconst senderEmail = (senderMatch && senderMatch[1].trim())\n  || emailData.replyTo\n  || emailData.from;\n\nconst kiHinweis = '\\n\\n---\\n⚠️ Dieses Ticket wurde KI-generiert aus einer E-Mail von: ' + senderEmail;\n\nreturn [{\n  json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }\n}];"
+        "functionCode": "// output[0] = Erfolg  |  output[1] = Fehler\ntry {\n  const aiResponse = items[0].json.choices[0].message.content;\n  let parsed;\n  try { parsed = JSON.parse(aiResponse); }\n  catch (e) { parsed = { title: 'Neues Ticket', category: 'technical', priority: 'medium', deadline: null, description: '' }; }\n\n  const emailData = $items('📧 E-Mail Empfang (IMAP)')[0].json;\n  const bodyText = emailData.text || emailData.html || '';\n  const senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\n  const emailRegex = /[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(emailRegex);\n  const senderEmail = (senderMatch && senderMatch[1].trim())\n    || (fromMatch && fromMatch[0])\n    || fromRaw.replace(/^[\"'\\s<>]+|[\"'\\s<>]+$/g, '').trim();\n\n  const kiHinweis = '\\n\\n---\\n⚠️ KI-generiert aus E-Mail von: ' + senderEmail;\n\n  return [[{ json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }}], []];\n} catch (e) {\n  const emailData = items[0].json;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/);\n  return [[], [{ json: { error: e.message, senderEmail: (fromMatch && fromMatch[0]) || 'unknown' } }]];\n}"
       },
       "id": "parse-ai-response",
       "name": "🔧 KI-Antwort aufbereiten",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1010,
+        1320,
         200
       ]
     },
@@ -175,21 +239,9 @@
       "name": "🗃️ Ticket in Firebase anlegen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
+      "continueOnFail": true,
       "position": [
-        1120,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "// Tageszähler erhöhen\nconst staticData = $getWorkflowStaticData('global');\nstaticData.dailyCount = (staticData.dailyCount || 0) + 1;\n\nreturn items;"
-      },
-      "id": "increment-counter",
-      "name": "➕ Zähler erhöhen",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        1340,
+        1540,
         200
       ]
     },
@@ -197,16 +249,16 @@
       "parameters": {
         "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
         "toEmail": "={{ $('🔧 KI-Antwort aufbereiten').item.json.senderEmail }}",
-        "subject": "✅ Dein Feature Request wurde erfasst!",
+        "subject": "Dein Feature Request wurde erfasst!",
         "emailType": "html",
-        "message": "={{ '<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\"><div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\"><h1 style=\"color: white; margin: 0; font-size: 24px;\">Join – Kanban Board</h1></div><div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\"><h2 style=\"color: #2A3647;\">Dein Ticket wurde angelegt! 🎉</h2><p>Vielen Dank für deinen Feature Request. Wir haben folgendes Ticket erstellt:</p><div style=\"background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 15px 0;\"><p><strong>Titel:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.title + '</p><p><strong>Kategorie:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.category + '</p><p><strong>Priorität:</strong> ' + $('🔧 KI-Antwort aufbereiten').item.json.priority + '</p></div><p style=\"color: #666;\">Das Ticket wurde automatisch analysiert und in unserem Triage-Backlog platziert. Du wirst per E-Mail benachrichtigt, wenn sich der Status ändert.</p></div></body></html>' }}"
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0;font-size:24px\">Join - Kanban Board</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#2A3647\">Dein Ticket wurde angelegt!</h2><p>Vielen Dank fuer deinen Feature Request. Wir haben dein Anliegen erfasst und im Triage-Backlog platziert.</p><p>Du wirst per E-Mail benachrichtigt, wenn sich der Status aendert.</p></div></body></html>"
       },
       "id": "confirm-email",
-      "name": "📨 Bestätigungs-E-Mail senden",
+      "name": "📨 Bestaetigungs-E-Mail senden",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
       "position": [
-        1340,
+        1760,
         80
       ],
       "credentials": {
@@ -218,19 +270,57 @@
     },
     {
       "parameters": {
+        "functionCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.dailyCount = (staticData.dailyCount || 0) + 1;\nreturn items;"
+      },
+      "id": "increment-counter",
+      "name": "➕ Zähler erhöhen",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "filters": {
+          "q": "={{ 'rfc822msgid:' + $('📧 E-Mail Empfang (IMAP)').item.json.messageId }}"
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "id": "get-gmail-message",
+      "name": "📬 Gmail-Nachricht holen",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
         "resource": "message",
         "operation": "addLabels",
-        "messageId": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.id }}",
+        "messageId": "={{ $json.id }}",
         "labelIds": [
           "DEINE_LABEL_ID_ERLEDIGT"
         ]
       },
       "id": "move-to-done",
-      "name": "📁 Mail → 'erledigt' verschieben",
+      "name": "📁 Mail erledigt",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2,
       "position": [
-        1560,
+        2200,
         200
       ],
       "credentials": {
@@ -244,17 +334,40 @@
       "parameters": {
         "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
         "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
-        "subject": "⚠️ Tageslimit erreicht – Feature Request nicht erfasst",
+        "subject": "Tageslimit erreicht - Feature Request nicht erfasst",
         "emailType": "html",
-        "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Tageslimit erreicht</h2>\n  <p>Leider wurde heute das maximale Limit von <strong>10 Feature Requests pro Tag</strong> erreicht.</p>\n  <p>Dein Anliegen wurde nicht verarbeitet. Bitte sende die Anfrage morgen erneut.</p>\n  <p style=\"color: #666; font-size: 14px;\">Dieses Limit dient der fairen Nutzung des Systems.</p>\n</div>\n</body></html>"
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0\">Join - Issue Collector</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#FF8190\">Tageslimit erreicht</h2><p>Leider wurde heute das maximale Limit von <strong>10 Feature Requests pro Tag</strong> erreicht.</p><p>Bitte sende deine Anfrage morgen erneut.</p></div></body></html>"
       },
       "id": "limit-email",
       "name": "🚫 Limit-E-Mail senden",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
       "position": [
-        680,
-        420
+        1100,
+        560
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
+        "subject": "Dein Feature Request konnte nicht verarbeitet werden",
+        "emailType": "html",
+        "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0\">Join - Issue Collector</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#FF8190\">Verarbeitungsfehler</h2><p>Leider konnte dein Feature Request aufgrund eines technischen Fehlers nicht verarbeitet werden.</p><p>Unser Team hat deine E-Mail erhalten und wird sich zeitnah melden.</p></div></body></html>"
+      },
+      "id": "error-email",
+      "name": "📨 Fehler-E-Mail an Absender",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        560
       ],
       "credentials": {
         "smtp": {
@@ -273,12 +386,12 @@
         ]
       },
       "id": "move-to-error",
-      "name": "📁 Mail → 'zu bearbeiten'",
+      "name": "📁 Mail zu bearbeiten",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2,
       "position": [
-        1120,
-        420
+        1540,
+        560
       ],
       "credentials": {
         "gmailOAuth2": {
@@ -288,22 +401,15 @@
       }
     },
     {
-      "id": "error-email",
-      "name": "📨 Fehler-E-Mail an Absender",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2,
+      "parameters": {},
+      "id": "noop-systemmail",
+      "name": "📭 Systemmail verwerfen",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
       "position": [
-        900,
-        420
-      ],
-      "parameters": {
-        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
-        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
-        "subject": "⚠️ Dein Feature Request konnte nicht verarbeitet werden",
-        "emailType": "html",
-        "message": "<html><body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n<div style=\"background: #2A3647; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0;\">Join – Issue Collector</h1>\n</div>\n<div style=\"border: 1px solid #ddd; padding: 20px; border-radius: 0 0 8px 8px;\">\n  <h2 style=\"color: #FF8190;\">Verarbeitungsfehler</h2>\n  <p>Leider konnte dein Feature Request aufgrund eines technischen Fehlers nicht verarbeitet werden.</p>\n  <p>Unser Team hat deine E-Mail erhalten und wird sich zeitnah melden.</p>\n  <p style=\"color: #666; font-size: 14px;\">Bitte wende dich direkt an das Team, falls du innerhalb von 24 Stunden keine Rückmeldung erhältst.</p>\n</div>\n</body></html>"
-      },
-      "credentials": {}
+        420,
+        480
+      ]
     }
   ],
   "connections": {
@@ -326,6 +432,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "📭 Systemmail verwerfen",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -344,7 +457,7 @@
       "main": [
         [
           {
-            "node": "🤖 KI-Analyse (OpenAI)",
+            "node": "🤖 KI-Analyse (Groq)",
             "type": "main",
             "index": 0
           }
@@ -358,7 +471,7 @@
         ]
       ]
     },
-    "🤖 KI-Analyse (OpenAI)": {
+    "🤖 KI-Analyse (Groq)": {
       "main": [
         [
           {
@@ -391,12 +504,12 @@
       "main": [
         [
           {
-            "node": "➕ Zähler erhöhen",
+            "node": "📨 Bestaetigungs-E-Mail senden",
             "type": "main",
             "index": 0
           },
           {
-            "node": "📨 Bestätigungs-E-Mail senden",
+            "node": "➕ Zähler erhöhen",
             "type": "main",
             "index": 0
           }
@@ -414,7 +527,18 @@
       "main": [
         [
           {
-            "node": "📁 Mail → 'erledigt' verschieben",
+            "node": "📬 Gmail-Nachricht holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📬 Gmail-Nachricht holen": {
+      "main": [
+        [
+          {
+            "node": "📁 Mail erledigt",
             "type": "main",
             "index": 0
           }
@@ -425,7 +549,7 @@
       "main": [
         [
           {
-            "node": "📁 Mail → 'zu bearbeiten'",
+            "node": "📁 Mail zu bearbeiten",
             "type": "main",
             "index": 0
           }

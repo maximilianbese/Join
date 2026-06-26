@@ -115,7 +115,9 @@ function getTaskDetailsPriorityHtml(task, priorityIcon) {
  * @returns {string} The HTML string for the creator row.
  */
 function getTaskDetailsCreatorHtml(task) {
-  const cleanEmail = (task.senderEmail || '').replace(/^["'\s]+|["'\s]+$/g, '').trim();
+  const raw = task.senderEmail || '';
+  const emailMatch = raw.match(/[\w.+\-]+@[\w\-]+\.[\w.]+/);
+  const cleanEmail = emailMatch ? emailMatch[0] : raw.replace(/^["'\s<>]+|["'\s<>]+$/g, '').trim();
   const badge = `<span class="creator-badge creator-${task.aiGenerated ? "extern" : "intern"}">${task.aiGenerated ? "Extern" : "Intern"}</span>`;
   const name = `<span class="creator-name">${task.aiGenerated && cleanEmail ? cleanEmail : (task.creatorName || '–')}</span>`;
   const emailLink = task.aiGenerated && cleanEmail ? `<a href="mailto:${cleanEmail}" class="creator-email-link" title="Send email"><img src="./assets/icons/mail.svg" alt="Email" onerror="this.style.display='none'"> E-Mail</a>` : '';

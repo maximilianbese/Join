@@ -256,7 +256,10 @@
     <script>
       const RTDB_URL = "https://join-f047f-default-rtdb.europe-west1.firebasedatabase.app";
       const DAILY_LIMIT = 10;
-      let collectorEmail = "issues@your-domain.com";
+      let collectorEmail = typeof ISSUE_COLLECTOR_EMAIL !== "undefined" ? ISSUE_COLLECTOR_EMAIL : "issues@your-domain.com";
+      document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("info-email").textContent = collectorEmail;
+      });
 
       // Logo intro animation (JS-driven for maximum browser compatibility)
       (function() {
@@ -316,6 +319,7 @@
       async function goToStakeholder() {
         if (typeof ISSUE_COLLECTOR_EMAIL !== "undefined") collectorEmail = ISSUE_COLLECTOR_EMAIL;
         document.getElementById("compose-to").value = collectorEmail;
+        document.getElementById("info-email").textContent = collectorEmail;
         let used = 0;
         try {
           const res = await fetch(RTDB_URL + "/tasks.json");

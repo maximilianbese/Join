@@ -1,5 +1,6 @@
 .vscode/*
 scripts/firebase-config.js
+scripts/firebase-init.js
 
 # Issue Collector - Sensible Konfiguration (NIEMALS ins Repo!)
 scripts/issue-collector/config.js
