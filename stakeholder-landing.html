@@ -296,13 +296,17 @@
 
       let counterPollInterval = null;
 
+      async function getTodayCount() {
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await fetch(RTDB_URL + "/daily_count/" + today + ".json");
+        if (!res.ok) return 0;
+        const data = await res.json();
+        return data ? Object.keys(data).length : 0;
+      }
+
       async function refreshCounter() {
         try {
-          const res = await fetch(RTDB_URL + "/tasks.json");
-          if (res.ok) {
-            const used = countTodayTickets(await res.json());
-            updateCounter(used);
-          }
+          updateCounter(await getTodayCount());
         } catch (_) {}
       }
 
@@ -321,10 +325,7 @@
         document.getElementById("compose-to").value = collectorEmail;
         document.getElementById("info-email").textContent = collectorEmail;
         let used = 0;
-        try {
-          const res = await fetch(RTDB_URL + "/tasks.json");
-          if (res.ok) used = countTodayTickets(await res.json());
-        } catch (_) {}
+        try { used = await getTodayCount(); } catch (_) {}
         if (used >= DAILY_LIMIT) {
           showScreen("limit");
         } else {
@@ -337,7 +338,7 @@
         if (!tasks) return 0;
         const today = new Date().toISOString().slice(0, 10);
         return Object.values(tasks).filter(function(t) {
-          // n8n speichert als "createdAt", Fallback auf "timestamp"
+          if (!t || typeof t !== "object") return false;
           const dateField = t.createdAt || t.timestamp || "";
           return dateField.startsWith(today);
         }).length;
@@ -380,10 +381,15 @@
           document.getElementById("compose-from").value    = "";
           document.getElementById("compose-subject").value = "";
           document.getElementById("compose-body").value    = "";
-          // Counter nach Versand aktualisieren
+          // Zähler direkt hochzählen — kein n8n nötig
           try {
-            const res2 = await fetch(RTDB_URL + "/tasks.json");
-            if (res2.ok) updateCounter(countTodayTickets(await res2.json()));
+            const today = new Date().toISOString().slice(0, 10);
+            await fetch(RTDB_URL + "/daily_count/" + today + ".json", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ts: Date.now() })
+            });
+            updateCounter(await getTodayCount());
           } catch (_) {}
           setTimeout(function() { window.location.href = "./index.html"; }, 2000);
         } catch (err) {
