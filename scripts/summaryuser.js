@@ -379,25 +379,4 @@ function showMobileGreetingOverlay(greetingContainer) {
  * The sessionStorage flag is removed after the first call to prevent re-display on reload.
  */
 function checkMobileGreeting() {
-  const showGreeting = sessionStorage.getItem("showJoinGreeting");
-  if (showGreeting !== "true") return;
-  removeMobileGreetingFlag();
-  if (window.innerWidth <= 780) {
-    const greetingContainer = document.querySelector(".greeting-container");
-    if (greetingContainer) {
-      showMobileGreetingOverlay(greetingContainer);
-    }
-  }
-}
-
-/**
- * Redirects the user to the board page with a brief click animation.
- * @param {Event} event - The click event.
- */
-function redirectToBoard(event) {
-  const card = event.currentTarget;
-  card.classList.add("card-clicked");
-  setTimeout(function () {
-    window.location.href = "board.html";
-  }, 120);
-}
+  const showGree

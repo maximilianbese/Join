@@ -331,20 +331,3 @@
   .deadline-info p {
     font-size: 14px;
   }
-
-  .card-email-requests {
-    width: 100%;
-  }
-
-  .greeting-container {
-    margin-bottom: 20px;
-  }
-
-  .greeting-container h2 {
-    font-size: 36px;
-  }
-
-  .greeting-container h1 {
-    font-size: 48px;
-  }
-}

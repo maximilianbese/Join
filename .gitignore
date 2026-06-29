@@ -2,12 +2,11 @@
 scripts/firebase-config.js
 scripts/firebase-init.js
 
-# Issue Collector - Sensible Konfiguration (NIEMALS ins Repo!)
-scripts/issue-collector/config.js
+# Issue Collector - example only, config.js is safe to deploy (no secrets)
+# scripts/issue-collector/config.js
 .env
 .env.local
 n8n-workflows/.env
 
 # n8n Encryption Key und Credentials (falls lokal gespeichert)
-n8n-workflows/credentials/
-*.n8n.env
+n8n-workflows/credenti
