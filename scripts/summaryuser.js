@@ -109,41 +109,64 @@ async function updateTaskMetrics(user) {
   await updateEmailRequestsCount();
 }
 
+const EMAIL_REQUESTS_SYSTEM_PHRASES = [
+  "wurde erfolgreich erfasst und wird bearbeitet",
+  "feature request bearbeitet",
+  "ticket wurde erstellt",
+  "ticket wurde angelegt",
+  "automatisch analysiert und in unserem triage-backlog",
+  "tageslimit erreicht",
+  "feature request konnte nicht verarbeitet werden",
+];
+
 /**
- * Counts AI-generated tickets from the Realtime Database and displays the count.
+ * Extracts and normalises the sender email address from a raw senderEmail field.
+ * @param {string} raw - Raw senderEmail value from the ticket.
+ * @returns {string} Lowercased email address.
+ */
+function extractSenderEmail(raw) {
+  const match = raw.match(/[\w.+\-]+@[\w\-]+\.[\w.]+/);
+  return (match ? match[0] : raw.replace(/^["'\s<>]+|["'\s<>]+$/g, "")).toLowerCase();
+}
+
+/**
+ * Returns true if the ticket is a system-generated or collector email.
+ * @param {Object} t - Raw ticket object from RTDB.
+ * @param {string} collectorEmail - Lowercased collector address to filter.
+ * @returns {boolean}
+ */
+function isSystemTicket(t, collectorEmail) {
+  if (!t || t.status !== "triage") return true;
+  if (extractSenderEmail(t.senderEmail || "") === collectorEmail) return true;
+  const text = ((t.title || "") + " " + (t.description || "")).toLowerCase();
+  return EMAIL_REQUESTS_SYSTEM_PHRASES.some(function (p) { return text.includes(p); });
+}
+
+/**
+ * Counts valid triage tickets from a snapshot and writes the result to the DOM.
+ * @param {import("firebase/database").DataSnapshot} snapshot - RTDB snapshot of /tasks.
+ */
+function renderEmailRequestsCount(snapshot) {
+  const collectorEmail = typeof ISSUE_COLLECTOR_EMAIL !== "undefined"
+    ? ISSUE_COLLECTOR_EMAIL.toLowerCase() : "join.issue.collector@gmail.com";
+  let count = 0;
+  if (snapshot.exists()) {
+    snapshot.forEach(function (child) {
+      if (!isSystemTicket(child.val(), collectorEmail)) count++;
+    });
+  }
+  const el = document.getElementById("count-email-requests");
+  if (el) el.textContent = count;
+}
+
+/**
+ * Subscribes to the Realtime Database tasks node and keeps the email-requests
+ * counter on the summary page in sync.
  */
 function updateEmailRequestsCount() {
   try {
     const ticketsRef = window.fbRtdbRef(window.firebaseRtdb, "tasks");
-    window.fbRtdbOnValue(ticketsRef, function (snapshot) {
-      let count = 0;
-      const SYSTEM_PHRASES = [
-        "wurde erfolgreich erfasst und wird bearbeitet",
-        "feature request bearbeitet",
-        "ticket wurde erstellt",
-        "ticket wurde angelegt",
-        "automatisch analysiert und in unserem triage-backlog",
-        "tageslimit erreicht",
-        "feature request konnte nicht verarbeitet werden",
-      ];
-      const collectorEmail = typeof ISSUE_COLLECTOR_EMAIL !== "undefined"
-        ? ISSUE_COLLECTOR_EMAIL.toLowerCase() : "join.issue.collector@gmail.com";
-      if (snapshot.exists()) {
-        snapshot.forEach(function (child) {
-          const t = child.val();
-          if (!t || t.status !== "triage") return;
-          const rawSender = t.senderEmail || "";
-          const senderMatch = rawSender.match(/[\w.+\-]+@[\w\-]+\.[\w.]+/);
-          const sender = (senderMatch ? senderMatch[0] : rawSender.replace(/^["'\s<>]+|["'\s<>]+$/g, "")).toLowerCase();
-          if (sender === collectorEmail) return;
-          const text = ((t.title || "") + " " + (t.description || "")).toLowerCase();
-          if (SYSTEM_PHRASES.some(function (p) { return text.includes(p); })) return;
-          count++;
-        });
-      }
-      const el = document.getElementById("count-email-requests");
-      if (el) el.textContent = count;
-    });
+    window.fbRtdbOnValue(ticketsRef, renderEmailRequestsCount);
   } catch (error) {
     console.error("Error loading email requests count:", error);
   }
