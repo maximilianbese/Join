@@ -195,6 +195,10 @@
   width: calc(38% - 10px);
   height: 168px;
   gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .email-count {
@@ -206,6 +210,7 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  padding-right: 20px;
 }
 
 .urgent-info .icon-badge {
@@ -276,9 +281,13 @@
     min-height: 168px;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
     padding: 20px 25px;
+  }
+
+  .urgent-info {
+    padding-right: 0;
   }
 
   .deadline-info {
@@ -288,6 +297,8 @@
     padding-top: 12px;
     height: auto;
     width: 100%;
+    align-items: center;
+    text-align: center;
   }
 }
 

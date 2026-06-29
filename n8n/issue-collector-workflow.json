@@ -270,12 +270,26 @@
     },
     {
       "parameters": {
-        "functionCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.dailyCount = (staticData.dailyCount || 0) + 1;\nreturn items;"
+        "method": "POST",
+        "url": "=https://join-f047f-default-rtdb.europe-west1.firebasedatabase.app/daily_count/{{ new Date().toISOString().slice(0,10) }}.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={ \"ts\": {{ Date.now() }} }"
       },
       "id": "increment-counter",
-      "name": "➕ Zähler erhöhen",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "name": "➕ Zähler in Firebase erhöhen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "continueOnFail": true,
       "position": [
         1760,
         200
