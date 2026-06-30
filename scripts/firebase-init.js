@@ -7,6 +7,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
   getAuth,
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInAnonymously,
@@ -77,8 +78,11 @@ window.fbRtdbSet = set;
 window.fbRtdbRemove = remove;
 window.fbRtdbOnValue = onValue;
 
-// Signal: Firebase is ready
-window.firebaseReady = true;
-window.dispatchEvent(new Event("firebaseReady"));
+// Signal: Firebase is ready — but only after auth state is confirmed so that
+// RTDB reads always have a valid (or confirmed-absent) auth token.
+const _unsubAuth = onAuthStateChanged(auth, function () {
+  _unsubAuth();
+  window.firebaseReady = true;
+  window.dispatchEvent(new Event("firebaseReady"));
+});
 
-console.log("Firebase initialized successfully");

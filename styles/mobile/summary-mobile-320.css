@@ -1,14 +1,53 @@
-/* ---- 320px sub-breakpoint for summary page ---- */
+/* ---- 360px sub-breakpoint for summary page ---- */
 @media (max-width: 360px) {
   .summary-title h1 { font-size: 36px !important; }
   .summary-title span { font-size: 17px !important; }
   .metric-card b { font-size: 28px !important; }
   .metric-card p { font-size: 12px !important; }
-  .card-large { padding: 0 12px !important; }
-  .deadline-info b { font-size: 14px !important; }
-  .deadline-info p { font-size: 12px !important; }
   .card-square b { font-size: 36px !important; }
   .card-square p { font-size: 11px !important; }
   .greeting-container h2 { font-size: 28px !important; }
   .greeting-container h1 { font-size: 36px !important; }
+
+  .card-large {
+    padding: 0 6px !important;
+    overflow: hidden;
+  }
+
+  .urgent-info {
+    gap: 6px !important;
+  }
+
+  .urgent-info b {
+    font-size: 24px !important;
+  }
+
+  .urgent-info p {
+    font-size: 11px !important;
+  }
+
+  .urgent-info .icon-badge {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .urgent-info .icon-badge img {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .deadline-info {
+    padding-left: 6px !important;
+    margin-left: 6px !important;
+  }
+
+  .deadline-info b {
+    font-size: 11px !important;
+    white-space: nowrap;
+  }
+
+  .deadline-info p {
+    font-size: 10px !important;
+    white-space: nowrap;
+  }
 }

@@ -10,6 +10,10 @@
   padding: var(--content-padding-y) var(--content-padding-x);
   max-width: var(--content-max-width);
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .summary-title {
@@ -34,6 +38,7 @@
   display: flex;
   gap: 60px;
   align-items: center;
+  justify-content: center;
 }
 
 .metrics-grid {
