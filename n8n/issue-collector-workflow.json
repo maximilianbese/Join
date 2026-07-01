@@ -155,6 +155,7 @@
         },
         "sendBody": true,
         "bodyContentType": "json",
+        "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\"model\": \"llama-3.3-70b-versatile\",\"temperature\": 0.3,\"messages\": [{\"role\": \"system\", \"content\": \"Du bist ein KI-Assistent der Feature Requests und Bug-Reports analysiert. Antworte NUR mit einem JSON-Objekt ohne Markdown-Blocke.\\\\n\\\\nFormat:\\\\n{\\\\n  \\\\\\\"title\\\\\\\": \\\\\\\"Praegnanter Titel (max 60 Zeichen)\\\\\\\",\\\\n  \\\\\\\"category\\\\\\\": \\\\\\\"technical | user-story | bug\\\\\\\",\\\\n  \\\\\\\"priority\\\\\\\": \\\\\\\"urgent | medium | low\\\\\\\",\\\\n  \\\\\\\"deadline\\\\\\\": \\\\\\\"YYYY-MM-DD oder null\\\\\\\",\\\\n  \\\\\\\"description\\\\\\\": \\\\\\\"Aufbereitete Beschreibung des Anliegens\\\\\\\",\\\\n  \\\\\\\"subtasks\\\\\\\": [\\\\\\\"Konkreter Umsetzungsschritt 1\\\\\\\", \\\\\\\"Konkreter Umsetzungsschritt 2\\\\\\\"]\\\\n}\\\\n\\\\nSubtask-Regeln:\\\\n- Nur konkrete, umsetzbare Schritte als Subtasks (max. 4, je max. 60 Zeichen)\\\\n- Kein allgemeiner Text - Subtasks sind Aufgaben, keine Beschreibungen\\\\n- Leeres Array [] wenn keine sinnvollen Schritte ableitbar sind\\\\n\\\\nPrioritaet-Regeln:\\\\n- urgent: kritisch, dringend, blockiert, crash\\\\n- low: nice to have, irgendwann, optional\\\\n- medium: Standard\"},{\"role\": \"user\", \"content\": \"Analysiere diese E-Mail:\\\\n\\\\nVon: \" + $json.from + \"\\\\nBetreff: \" + $json.subject + \"\\\\n\\\\nInhalt:\\\\n\" + ($json.text || $json.html || '')}]}) }}"
       },
       "id": "groq-ai",
@@ -174,7 +175,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// output[0] = Erfolg  |  output[1] = Fehler\ntry {\n  const aiResponse = items[0].json.choices[0].message.content;\n  let parsed;\n  try { parsed = JSON.parse(aiResponse); }\n  catch (e) { parsed = { title: 'Neues Ticket', category: 'technical', priority: 'medium', deadline: null, description: '', subtasks: [] }; }\n\n  const emailData = $items('🔧 Mail normalisieren')[0].json;\n  const bodyText = emailData.text || emailData.html || '';\n  const senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\n  const emailRegex = /[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(emailRegex);\n  const senderEmail = (senderMatch && senderMatch[1].trim())\n    || (fromMatch && fromMatch[0])\n    || fromRaw.replace(/^[\"'\\s<>]+|[\"'\\s<>]+$/g, '').trim();\n\n  const kiHinweis = '\\n\\n---\\n⚠️ KI-generiert aus E-Mail von: ' + senderEmail;\n\n  const rawSubtasks = Array.isArray(parsed.subtasks) ? parsed.subtasks : [];\n  const subtasks = rawSubtasks\n    .filter(function(t) { return typeof t === 'string' && t.trim().length > 0; })\n    .slice(0, 4)\n    .map(function(t, i) { return { id: Date.now() + i, text: t.trim(), completed: false }; });\n\n  return [[{ json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    subtasks: subtasks,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }}], []];\n} catch (e) {\n  const emailData = items[0].json;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/);\n  return [[], [{ json: { error: e.message, senderEmail: (fromMatch && fromMatch[0]) || 'unknown' } }]];\n}"
+        "functionCode": "// output[0] = Erfolg  |  output[1] = Fehler\ntry {\n  const aiResponse = items[0].json.choices[0].message.content;\n  let parsed;\n  try { parsed = JSON.parse(aiResponse); }\n  catch (e) { parsed = { title: 'Neues Ticket', category: 'technical', priority: 'medium', deadline: null, description: '', subtasks: [] }; }\n\n  const emailData = $('🔧 Mail normalisieren').first().json;\n  const bodyText = emailData.text || emailData.html || '';\n  const senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\n  const emailRegex = /[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(emailRegex);\n  const senderEmail = (senderMatch && senderMatch[1].trim())\n    || (fromMatch && fromMatch[0])\n    || fromRaw.replace(/^[\"'\\s<>]+|[\"'\\s<>]+$/g, '').trim();\n\n  const kiHinweis = '\\n\\n---\\n⚠️ KI-generiert aus E-Mail von: ' + senderEmail;\n\n  const rawSubtasks = Array.isArray(parsed.subtasks) ? parsed.subtasks : [];\n  const subtasks = rawSubtasks\n    .filter(function(t) { return typeof t === 'string' && t.trim().length > 0; })\n    .slice(0, 4)\n    .map(function(t, i) { return { id: Date.now() + i, text: t.trim(), completed: false }; });\n\n  return [[{ json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    subtasks: subtasks,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }}], []];\n} catch (e) {\n  const emailData = items[0].json;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/);\n  return [[], [{ json: { error: e.message, senderEmail: (fromMatch && fromMatch[0]) || 'unknown' } }]];\n}"
       },
       "id": "parse-ai-response",
       "name": "🔧 KI-Antwort aufbereiten",
@@ -200,6 +201,7 @@
         },
         "sendBody": true,
         "bodyContentType": "json",
+        "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ id: $now.toMillis(), title: $json.title, description: $json.description, category: $json.category, priority: $json.priority, dueDate: $json.deadline, status: 'triage', position: $now.toMillis(), createdAt: $now.toISO(), createdBy: 'email-collector', assignedTo: [], subtasks: Array.isArray($json.subtasks) ? $json.subtasks : [], senderEmail: $json.senderEmail, aiGenerated: true }) }}"
       },
       "id": "create-firebase-task",
@@ -215,7 +217,7 @@
     {
       "parameters": {
         "fromEmail": "join.issue.collector@gmail.com",
-        "toEmail": "={{ $('🔧 KI-Antwort aufbereiten').item.json.senderEmail }}",
+        "toEmail": "={{ (($('🔧 Mail normalisieren').item.json.replyTo || $('🔧 Mail normalisieren').item.json.from || '').match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/) || [''])[0] }}",
         "subject": "Dein Feature Request wurde erfasst!",
         "emailType": "html",
         "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0;font-size:24px\">Join - Kanban Board</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#2A3647\">Dein Ticket wurde angelegt!</h2><p>Vielen Dank fuer deinen Feature Request. Wir haben dein Anliegen erfasst und im Triage-Backlog platziert.</p><p>Du wirst per E-Mail benachrichtigt, wenn sich der Status aendert.</p></div></body></html>"
@@ -250,6 +252,7 @@
         },
         "sendBody": true,
         "bodyContentType": "json",
+        "specifyBody": "json",
         "jsonBody": "={ \"ts\": {{ Date.now() }} }"
       },
       "id": "increment-counter",
@@ -268,7 +271,7 @@
         "operation": "addLabels",
         "messageId": "={{ $('🔧 Mail normalisieren').item.json.messageId }}",
         "labelIds": [
-          "DEINE_LABEL_ID_ERLEDIGT"
+          "Label_5816970856089661099"
         ]
       },
       "id": "move-to-done",
@@ -339,7 +342,7 @@
         "operation": "addLabels",
         "messageId": "={{ $('🔧 Mail normalisieren').item.json.messageId }}",
         "labelIds": [
-          "DEINE_LABEL_ID_ZU_BEARBEITEN"
+          "Label_5292966282637857016"
         ]
       },
       "id": "move-to-error",
@@ -403,7 +406,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Wandelt die verschachtelte Gmail-Struktur in flache Felder um,\n// die alle nachfolgenden Nodes erwarten (from, subject, text ...).\nconst msg = items[0].json;\n\nfunction findHeader(name) {\n  const headers = (msg.payload && msg.payload.headers) || [];\n  const hit = headers.find(function (h) {\n    return h.name && h.name.toLowerCase() === name.toLowerCase();\n  });\n  return hit ? hit.value : '';\n}\n\nfunction decodeBase64Url(data) {\n  if (!data) return '';\n  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');\n}\n\nfunction extractBody() {\n  const payload = msg.payload || {};\n  if (payload.body && payload.body.data) return decodeBase64Url(payload.body.data);\n  const parts = payload.parts || [];\n  const plain = parts.find(function (p) { return p.mimeType === 'text/plain'; });\n  if (plain && plain.body && plain.body.data) return decodeBase64Url(plain.body.data);\n  const html = parts.find(function (p) { return p.mimeType === 'text/html'; });\n  if (html && html.body && html.body.data) return decodeBase64Url(html.body.data);\n  return msg.snippet || '';\n}\n\nconst flat = {\n  from: msg.from || findHeader('From'),\n  replyTo: msg.replyTo || findHeader('Reply-To'),\n  subject: msg.subject || findHeader('Subject'),\n  text: msg.text || extractBody(),\n  messageId: msg.id || '',\n  threadId: msg.threadId || ''\n};\n\nreturn [{ json: Object.assign({}, msg, flat) }];\n"
+        "functionCode": "// Wandelt die verschachtelte Gmail-Struktur in flache Felder um,\n// die alle nachfolgenden Nodes erwarten (from, subject, text ...).\nconst msg = items[0].json;\n\nfunction findHeader(name) {\n  const headers = (msg.payload && msg.payload.headers) || [];\n  const hit = headers.find(function (h) {\n    return h.name && h.name.toLowerCase() === name.toLowerCase();\n  });\n  return hit ? hit.value : '';\n}\n\nfunction decodeBase64Url(data) {\n  if (!data) return '';\n  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');\n}\n\nfunction extractBody() {\n  const payload = msg.payload || {};\n  if (payload.body && payload.body.data) return decodeBase64Url(payload.body.data);\n  const parts = payload.parts || [];\n  const plain = parts.find(function (p) { return p.mimeType === 'text/plain'; });\n  if (plain && plain.body && plain.body.data) return decodeBase64Url(plain.body.data);\n  const html = parts.find(function (p) { return p.mimeType === 'text/html'; });\n  if (html && html.body && html.body.data) return decodeBase64Url(html.body.data);\n  return msg.snippet || '';\n}\n\nconst flat = {\n  from: msg.from || msg.From || findHeader('From'),\n  replyTo: msg.replyTo || msg['Reply-To'] || findHeader('Reply-To'),\n  subject: msg.subject || msg.Subject || findHeader('Subject'),\n  text: msg.text || extractBody(),\n  messageId: msg.id || '',\n  threadId: msg.threadId || ''\n};\n\nreturn [{ json: Object.assign({}, msg, flat) }];\n"
       },
       "id": "normalize-mail",
       "name": "🔧 Mail normalisieren",
