@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 📥 Eingang & Filterung\nEmpfängt E-Mails per Gmail, normalisiert sie,\nfiltert Systemmails heraus und prüft das\nTageslimit (max. 10 Tickets/Tag).",
+        "content": "## 📥 Eingang & Filterung\nEmpfängt E-Mails per IMAP, filtert Systemmails heraus\nund prüft das Tageslimit (max. 10 Tickets/Tag).",
         "height": 420,
-        "width": 900,
+        "width": 760,
         "color": 5
       },
       "id": "sticky-intake",
@@ -22,15 +22,14 @@
         "content": "## 🤖 KI-Verarbeitung\nGroq analysiert den Inhalt und extrahiert\nTitel, Kategorie, Priorität und Beschreibung.",
         "height": 340,
         "width": 480,
-        "color": 6,
-        "position": null
+        "color": 6
       },
       "id": "sticky-ai",
       "name": "Sticky Note - KI",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1220,
+        1060,
         100
       ]
     },
@@ -46,7 +45,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1660,
+        1560,
         60
       ]
     },
@@ -62,9 +61,39 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1220,
+        1060,
         480
       ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "mailbox": "INBOX",
+        "downloadAttachments": false,
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "email-trigger",
+      "name": "📧 E-Mail Empfang (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        200,
+        320
+      ],
+      "credentials": {
+        "imap": {
+          "id": "IMAP_CREDENTIAL_ID",
+          "name": "Issue Collector Mailbox"
+        }
+      }
     },
     {
       "parameters": {
@@ -99,7 +128,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        600,
+        420,
         320
       ]
     },
@@ -112,7 +141,7 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        820,
+        640,
         320
       ]
     },
@@ -133,7 +162,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        1040,
+        860,
         320
       ]
     },
@@ -141,8 +170,6 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -161,26 +188,26 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        1260,
+        1100,
         200
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "wjuvgofURXYQ0EDL",
-          "name": "Header Auth account"
+          "id": "GROQ_CREDENTIAL_ID",
+          "name": "Groq API"
         }
       }
     },
     {
       "parameters": {
-        "functionCode": "// output[0] = Erfolg  |  output[1] = Fehler\ntry {\n  const aiResponse = items[0].json.choices[0].message.content;\n  let parsed;\n  try { parsed = JSON.parse(aiResponse); }\n  catch (e) { parsed = { title: 'Neues Ticket', category: 'technical', priority: 'medium', deadline: null, description: '', subtasks: [] }; }\n\n  const emailData = $items('🔧 Mail normalisieren')[0].json;\n  const bodyText = emailData.text || emailData.html || '';\n  const senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\n  const emailRegex = /[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(emailRegex);\n  const senderEmail = (senderMatch && senderMatch[1].trim())\n    || (fromMatch && fromMatch[0])\n    || fromRaw.replace(/^[\"'\\s<>]+|[\"'\\s<>]+$/g, '').trim();\n\n  const kiHinweis = '\\n\\n---\\n⚠️ KI-generiert aus E-Mail von: ' + senderEmail;\n\n  const rawSubtasks = Array.isArray(parsed.subtasks) ? parsed.subtasks : [];\n  const subtasks = rawSubtasks\n    .filter(function(t) { return typeof t === 'string' && t.trim().length > 0; })\n    .slice(0, 4)\n    .map(function(t, i) { return { id: Date.now() + i, text: t.trim(), completed: false }; });\n\n  return [[{ json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    subtasks: subtasks,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }}], []];\n} catch (e) {\n  const emailData = items[0].json;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/);\n  return [[], [{ json: { error: e.message, senderEmail: (fromMatch && fromMatch[0]) || 'unknown' } }]];\n}"
+        "functionCode": "// output[0] = Erfolg  |  output[1] = Fehler\ntry {\n  const aiResponse = items[0].json.choices[0].message.content;\n  let parsed;\n  try { parsed = JSON.parse(aiResponse); }\n  catch (e) { parsed = { title: 'Neues Ticket', category: 'technical', priority: 'medium', deadline: null, description: '', subtasks: [] }; }\n\n  const emailData = $items('📧 E-Mail Empfang (IMAP)')[0].json;\n  const bodyText = emailData.text || emailData.html || '';\n  const senderMatch = bodyText.match(/REPLY_TO_EMAIL:\\s*([^\\n\\r<]+)/i);\n  const emailRegex = /[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(emailRegex);\n  const senderEmail = (senderMatch && senderMatch[1].trim())\n    || (fromMatch && fromMatch[0])\n    || fromRaw.replace(/^[\"'\\s<>]+|[\"'\\s<>]+$/g, '').trim();\n\n  const kiHinweis = '\\n\\n---\\n⚠️ KI-generiert aus E-Mail von: ' + senderEmail;\n\n  const rawSubtasks = Array.isArray(parsed.subtasks) ? parsed.subtasks : [];\n  const subtasks = rawSubtasks\n    .filter(function(t) { return typeof t === 'string' && t.trim().length > 0; })\n    .slice(0, 4)\n    .map(function(t, i) { return { id: Date.now() + i, text: t.trim(), completed: false }; });\n\n  return [[{ json: {\n    title: parsed.title,\n    category: parsed.category || 'technical',\n    priority: parsed.priority || 'medium',\n    deadline: parsed.deadline,\n    description: (parsed.description || '') + kiHinweis,\n    subtasks: subtasks,\n    senderEmail: senderEmail,\n    originalSubject: emailData.subject\n  }}], []];\n} catch (e) {\n  const emailData = items[0].json;\n  const fromRaw = emailData.replyTo || emailData.from || '';\n  const fromMatch = fromRaw.match(/[\\w.+\\-]+@[\\w\\-]+\\.[\\w.]+/);\n  return [[], [{ json: { error: e.message, senderEmail: (fromMatch && fromMatch[0]) || 'unknown' } }]];\n}"
       },
       "id": "parse-ai-response",
       "name": "🔧 KI-Antwort aufbereiten",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1480,
+        1320,
         200
       ]
     },
@@ -207,13 +234,13 @@
       "typeVersion": 4,
       "continueOnFail": true,
       "position": [
-        1700,
+        1540,
         200
       ]
     },
     {
       "parameters": {
-        "fromEmail": "join.issue.collector@gmail.com",
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
         "toEmail": "={{ $('🔧 KI-Antwort aufbereiten').item.json.senderEmail }}",
         "subject": "Dein Feature Request wurde erfasst!",
         "emailType": "html",
@@ -224,13 +251,13 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
       "position": [
-        1920,
+        1760,
         80
       ],
       "credentials": {
         "smtp": {
-          "id": "EyhwVvpVZCQLZTbY",
-          "name": "SMTP account"
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
         }
       }
     },
@@ -257,15 +284,40 @@
       "typeVersion": 4,
       "continueOnFail": true,
       "position": [
-        1920,
+        1760,
         200
       ]
     },
     {
       "parameters": {
         "resource": "message",
+        "operation": "getAll",
+        "filters": {
+          "q": "={{ 'rfc822msgid:' + $('📧 E-Mail Empfang (IMAP)').item.json.messageId }}"
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "id": "get-gmail-message",
+      "name": "📬 Gmail-Nachricht holen",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
         "operation": "addLabels",
-        "messageId": "={{ $('🔧 Mail normalisieren').item.json.messageId }}",
+        "messageId": "={{ $json.id }}",
         "labelIds": [
           "DEINE_LABEL_ID_ERLEDIGT"
         ]
@@ -275,21 +327,20 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2,
       "position": [
-        2140,
+        2200,
         200
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "HXentnWaSPt6PMO8",
-          "name": "Gmail OAuth2 API"
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
         }
-      },
-      "continueOnFail": true
+      }
     },
     {
       "parameters": {
-        "fromEmail": "join.issue.collector@gmail.com",
-        "toEmail": "={{ $('🔧 Mail normalisieren').item.json.replyTo || $('🔧 Mail normalisieren').item.json.from }}",
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
         "subject": "Tageslimit erreicht - Feature Request nicht erfasst",
         "emailType": "html",
         "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0\">Join - Issue Collector</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#FF8190\">Tageslimit erreicht</h2><p>Leider wurde heute das maximale Limit von <strong>10 Feature Requests pro Tag</strong> erreicht.</p><p>Bitte sende deine Anfrage morgen erneut.</p></div></body></html>"
@@ -299,20 +350,20 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
       "position": [
-        1260,
+        1100,
         560
       ],
       "credentials": {
         "smtp": {
-          "id": "EyhwVvpVZCQLZTbY",
-          "name": "SMTP account"
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
         }
       }
     },
     {
       "parameters": {
-        "fromEmail": "join.issue.collector@gmail.com",
-        "toEmail": "={{ $('🔧 Mail normalisieren').item.json.replyTo || $('🔧 Mail normalisieren').item.json.from }}",
+        "fromEmail": "DEINE_GMAIL_ADRESSE@gmail.com",
+        "toEmail": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.replyTo || $('📧 E-Mail Empfang (IMAP)').item.json.from }}",
         "subject": "Dein Feature Request konnte nicht verarbeitet werden",
         "emailType": "html",
         "message": "<html><body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px\"><div style=\"background:#2A3647;padding:20px;border-radius:8px 8px 0 0\"><h1 style=\"color:white;margin:0\">Join - Issue Collector</h1></div><div style=\"border:1px solid #ddd;padding:20px;border-radius:0 0 8px 8px\"><h2 style=\"color:#FF8190\">Verarbeitungsfehler</h2><p>Leider konnte dein Feature Request aufgrund eines technischen Fehlers nicht verarbeitet werden.</p><p>Unser Team hat deine E-Mail erhalten und wird sich zeitnah melden.</p></div></body></html>"
@@ -322,13 +373,13 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
       "position": [
-        1480,
+        1320,
         560
       ],
       "credentials": {
         "smtp": {
-          "id": "EyhwVvpVZCQLZTbY",
-          "name": "SMTP account"
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP Outgoing"
         }
       }
     },
@@ -336,7 +387,7 @@
       "parameters": {
         "resource": "message",
         "operation": "addLabels",
-        "messageId": "={{ $('🔧 Mail normalisieren').item.json.messageId }}",
+        "messageId": "={{ $('📧 E-Mail Empfang (IMAP)').item.json.id }}",
         "labelIds": [
           "DEINE_LABEL_ID_ZU_BEARBEITEN"
         ]
@@ -346,16 +397,15 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2,
       "position": [
-        1700,
+        1540,
         560
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "HXentnWaSPt6PMO8",
-          "name": "Gmail OAuth2 API"
+          "id": "GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Gmail OAuth"
         }
-      },
-      "continueOnFail": true
+      }
     },
     {
       "parameters": {},
@@ -364,69 +414,13 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        600,
+        420,
         480
-      ]
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "simple": true,
-        "filters": {
-          "labelIds": [
-            "INBOX"
-          ]
-        },
-        "options": {}
-      },
-      "id": "email-trigger",
-      "name": "📧 E-Mail Empfang (Gmail)",
-      "type": "n8n-nodes-base.gmailTrigger",
-      "typeVersion": 1,
-      "position": [
-        200,
-        320
-      ],
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "HXentnWaSPt6PMO8",
-          "name": "Gmail OAuth2 API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "functionCode": "// Wandelt die verschachtelte Gmail-Struktur in flache Felder um,\n// die alle nachfolgenden Nodes erwarten (from, subject, text ...).\nconst msg = items[0].json;\n\nfunction findHeader(name) {\n  const headers = (msg.payload && msg.payload.headers) || [];\n  const hit = headers.find(function (h) {\n    return h.name && h.name.toLowerCase() === name.toLowerCase();\n  });\n  return hit ? hit.value : '';\n}\n\nfunction decodeBase64Url(data) {\n  if (!data) return '';\n  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');\n}\n\nfunction extractBody() {\n  const payload = msg.payload || {};\n  if (payload.body && payload.body.data) return decodeBase64Url(payload.body.data);\n  const parts = payload.parts || [];\n  const plain = parts.find(function (p) { return p.mimeType === 'text/plain'; });\n  if (plain && plain.body && plain.body.data) return decodeBase64Url(plain.body.data);\n  const html = parts.find(function (p) { return p.mimeType === 'text/html'; });\n  if (html && html.body && html.body.data) return decodeBase64Url(html.body.data);\n  return msg.snippet || '';\n}\n\nconst flat = {\n  from: msg.from || findHeader('From'),\n  replyTo: msg.replyTo || findHeader('Reply-To'),\n  subject: msg.subject || findHeader('Subject'),\n  text: msg.text || extractBody(),\n  messageId: msg.id || '',\n  threadId: msg.threadId || ''\n};\n\nreturn [{ json: Object.assign({}, msg, flat) }];\n"
-      },
-      "id": "normalize-mail",
-      "name": "🔧 Mail normalisieren",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        380,
-        320
       ]
     }
   ],
   "connections": {
-    "📧 E-Mail Empfang (Gmail)": {
-      "main": [
-        [
-          {
-            "node": "🔧 Mail normalisieren",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Mail normalisieren": {
+    "📧 E-Mail Empfang (IMAP)": {
       "main": [
         [
           {
@@ -522,7 +516,7 @@
             "index": 0
           },
           {
-            "node": "➕ Zähler in Firebase erhöhen",
+            "node": "➕ Zähler erhöhen",
             "type": "main",
             "index": 0
           }
@@ -536,7 +530,18 @@
         ]
       ]
     },
-    "➕ Zähler in Firebase erhöhen": {
+    "➕ Zähler erhöhen": {
+      "main": [
+        [
+          {
+            "node": "📬 Gmail-Nachricht holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📬 Gmail-Nachricht holen": {
       "main": [
         [
           {

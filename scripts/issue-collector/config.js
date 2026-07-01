@@ -10,4 +10,4 @@
 const ISSUE_COLLECTOR_EMAIL = "join.issue.collector@gmail.com";
 
 const N8N_STATUS_WEBHOOK_URL =
-  "https://maximilanbese.app.n8n.cloud/webhook/ticket-status-changed";
+  "https://maximilianbese.app.n8n.cloud/webhook/ticket-status-changed";
