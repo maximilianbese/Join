@@ -105,7 +105,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const today = new Date().toISOString().split('T')[0];\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.countDate !== today) {\n  staticData.countDate = today;\n  staticData.dailyCount = 0;\n}\nreturn [{ json: { ...items[0].json, dailyTicketCount: staticData.dailyCount, todayDate: today } }];"
+        "functionCode": "// Robustes Datum (YYYY-MM-DD) - funktioniert in allen n8n-Umgebungen\nfunction heute() {\n  try { if ($now && $now.toFormat) return $now.toFormat('yyyy-MM-dd'); } catch (e) {}\n  try { if (typeof DateTime !== 'undefined') return DateTime.now().toFormat('yyyy-MM-dd'); } catch (e) {}\n  const d = new Date();\n  try { const iso = d.toISOString(); if (iso && iso.length >= 10) return iso.slice(0, 10); } catch (e) {}\n  const p = (x) => ('0' + x).slice(-2);\n  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());\n}\nconst today = heute();\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.countDate !== today) {\n  staticData.countDate = today;\n  staticData.dailyCount = 0;\n}\nreturn [{ json: Object.assign({}, items[0].json, { dailyTicketCount: staticData.dailyCount, todayDate: today }) }];"
       },
       "id": "count-checker",
       "name": "📊 Tageszähler prüfen",
@@ -237,7 +237,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://join-f047f-default-rtdb.europe-west1.firebasedatabase.app/daily_count/{{ new Date().toISOString().slice(0,10) }}.json",
+        "url": "=https://join-f047f-default-rtdb.europe-west1.firebasedatabase.app/daily_count/{{ $now.toFormat('yyyy-MM-dd') }}.json",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
